@@ -1,20 +1,30 @@
+# pages/1_home.py
 import streamlit as st
-from src.data_loader import load_lifetime
-from src.features import combined_player_profile
+from src.data_loader import load_lifetime, load_deliveries, load_matches
 
-st.title("🔥Most Active Players in IPL🔥")
+st.title("🏠 Home — IPL Dashboard")
 
-# Load lifetime dataset
+# Load
 lifetime = load_lifetime()
+deliveries = load_deliveries()
+matches = load_matches()
 
-# Best batter (based on total runs)
-best_batter = lifetime.sort_values("total_runs", ascending=False).iloc[0]
+col1, col2, col3 = st.columns(3)
+with col1:
+    st.metric("Total Players (lifetime)", lifetime['player'].nunique())
+with col2:
+    st.metric("Total Matches", int(matches.shape[0]))
+with col3:
+    st.metric("Total Deliveries (approx)", int(deliveries.shape[0]))
 
-st.subheader(f"🔥 Most Active Batter: {best_batter['player']}")
-st.metric("Total Runs", best_batter["total_runs"])
+st.write("---")
+st.subheader("Top performers (overall IPL lifetime file)")
 
-# Best bowler based on wickets
-if "wickets" in lifetime.columns:
-    best_bowler = lifetime.sort_values("wickets", ascending=False).iloc[0]
-    st.subheader(f"🎯 Best Bowler: {best_bowler['player']}")
-    st.metric("Wickets", best_bowler["wickets"])
+top_batter = lifetime.sort_values("total_runs", ascending=False).head(5)[['player', 'total_runs']]
+st.write("Top batters (by total runs)")
+st.table(top_batter)
+
+if 'wickets' in lifetime.columns:
+    top_bowler = lifetime.sort_values("wickets", ascending=False).head(5)[['player', 'wickets']]
+    st.write("Top bowlers (by wickets)")
+    st.table(top_bowler)
