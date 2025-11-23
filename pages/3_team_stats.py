@@ -1,27 +1,14 @@
 # pages/3_team_stats.py
 import streamlit as st
-import pandas as pd
-import seaborn as sns
-import matplotlib.pyplot as plt
-from src.data_loader import load_matches
+from src.data_loader import load_matches, load_deliveries
 
-st.title("🏏 Team Statistics")
+st.set_page_config(layout="wide")
+st.title("Team Stats")
 
 matches = load_matches()
-teams = sorted(pd.unique(matches[['team1','team2']].values.ravel('K')))
-team = st.selectbox("Select Team", teams)
+deliveries = load_deliveries()
 
-team_matches = matches[(matches['team1'] == team) | (matches['team2'] == team)]
-wins = int(team_matches['winner'].value_counts().get(team, 0))
-st.metric("Matches Played", int(team_matches.shape[0]))
-st.metric("Wins", wins)
-
-# Wins by season
-wins_season = team_matches[team_matches['winner'] == team].groupby('season').size().reset_index(name='wins')
-if not wins_season.empty:
-    fig, ax = plt.subplots()
-    sns.barplot(data=wins_season, x='season', y='wins', ax=ax)
-    ax.set_title(f"Wins by season - {team}")
-    st.pyplot(fig)
-else:
-    st.info("No wins data for this team in dataset.")
+st.write("Basic team-level stats (matches & runs).")
+# runs per team across deliveries
+team_runs = deliveries.groupby("batting_team")["total_runs"].sum().reset_index().rename(columns={"batting_team":"Team","total_runs":"Runs"})
+st.table(team_runs.sort_values("Runs", ascending=False).head(20).set_index("Team"))
