@@ -1,52 +1,54 @@
+# pages/5_player_compare.py
 import streamlit as st
+import pandas as pd
 from src.data_loader import load_lifetime, load_deliveries
 from src.features import combined_player_profile
 
+st.title("👥 Player Comparison")
 
-def app():
-    st.title("👥 Player Comparison")
+lifetime = load_lifetime()
+players = sorted(lifetime['player'].unique())
 
-    # Load data
-    lifetime_df = load_lifetime()
-    deliveries = load_deliveries()
+col1, col2 = st.columns(2)
+p1 = col1.selectbox("Player 1", players, index=0)
+p2 = col2.selectbox("Player 2", players, index=1)
 
-    # FIXED: Use correct column name: "Player"
-    players = sorted(lifetime_df["Player"].unique())
+prof1 = combined_player_profile(p1)
+prof2 = combined_player_profile(p2)
 
-    col1, col2 = st.columns(2)
-    with col1:
-        player1 = st.selectbox("Player 1", players)
-    with col2:
-        player2 = st.selectbox("Player 2", players)
+def safe(v):
+    try:
+        if v is None:
+            return 0
+        return round(float(v), 2)
+    except:
+        return v
 
-    # Profiles
-    p1 = combined_player_profile(player1)
-    p2 = combined_player_profile(player2)
+# Build comparison table rows
+rows = [
+    ("Total Runs (lifetime)", safe(prof1.get("lifetime", {}).get("total_runs") if prof1.get("lifetime") else None),
+                             safe(prof2.get("lifetime", {}).get("total_runs") if prof2.get("lifetime") else None)),
+    ("Average (lifetime)", safe(prof1.get("lifetime", {}).get("batting_average") if prof1.get("lifetime") else None),
+                             safe(prof2.get("lifetime", {}).get("batting_average") if prof2.get("lifetime") else None)),
+    ("Strike Rate (lifetime)", safe(prof1.get("lifetime", {}).get("strike_rate") if prof1.get("lifetime") else None),
+                                 safe(prof2.get("lifetime", {}).get("strike_rate") if prof2.get("lifetime") else None)),
+    ("IPL Runs", safe(prof1.get("runs", 0)), safe(prof2.get("runs", 0))),
+    ("IPL 4s", safe(prof1.get("fours", 0)), safe(prof2.get("fours", 0))),
+    ("IPL 6s", safe(prof1.get("sixes", 0)), safe(prof2.get("sixes", 0))),
+    ("IPL Wickets (lifetime)", safe(prof1.get("lifetime", {}).get("wickets") if prof1.get("lifetime") else None),
+                              safe(prof2.get("lifetime", {}).get("wickets") if prof2.get("lifetime") else None)),
+    ("Economy (lifetime)", safe(prof1.get("lifetime", {}).get("economy") if prof1.get("lifetime") else None),
+                           safe(prof2.get("lifetime", {}).get("economy") if prof2.get("lifetime") else None)),
+    ("Bowling Average (lifetime)", safe(prof1.get("lifetime", {}).get("bowling_average") if prof1.get("lifetime") else None),
+                                   safe(prof2.get("lifetime", {}).get("bowling_average") if prof2.get("lifetime") else None)),
+    ("Bowling SR (lifetime)", safe(prof1.get("lifetime", {}).get("bowling_strike_rate") if prof1.get("lifetime") else None),
+                               safe(prof2.get("lifetime", {}).get("bowling_strike_rate") if prof2.get("lifetime") else None)),
+]
 
-    # FIXED: Round all values to 2 decimals
-    def r(v):
-        return round(v, 2) if isinstance(v, (int, float)) else v
+df = pd.DataFrame({
+    "Stat": [r[0] for r in rows],
+    p1: [r[1] for r in rows],
+    p2: [r[2] for r in rows]
+})
 
-    stats = {
-        "Total Runs": (r(p1["total_runs"]), r(p2["total_runs"])),
-        "Average": (r(p1["batting_avg"]), r(p2["batting_avg"])),
-        "Strike Rate": (r(p1["strike_rate"]), r(p2["strike_rate"])),
-        "IPL Runs": (r(p1["ipl_runs"]), r(p2["ipl_runs"])),
-        "IPL 4s": (r(p1["ipl_4s"]), r(p2["ipl_4s"])),
-        "IPL 6s": (r(p1["ipl_6s"]), r(p2["ipl_6s"])),
-
-        # Bowling stats added
-        "IPL Wickets": (r(p1["ipl_wkts"]), r(p2["ipl_wkts"])),
-        "Economy Rate": (r(p1["eco_rate"]), r(p2["eco_rate"])),
-        "Bowling Average": (r(p1["bowl_avg"]), r(p2["bowl_avg"])),
-        "Bowling Strike Rate": (r(p1["bowl_sr"]), r(p2["bowl_sr"])),
-    }
-
-    st.write("### Comparison Table")
-    st.table(
-        {
-            "Stat": list(stats.keys()),
-            player1: [v[0] for v in stats.values()],
-            player2: [v[1] for v in stats.values()],
-        }
-    )
+st.dataframe(df, use_container_width=True)
